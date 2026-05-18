@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Analytics Dashboard - Bitexco Complete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+        .card-hover:hover { transform: translateY(-3px); transition: all 0.3s ease; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .tab-active { border-bottom: 3px solid #10b981; color: #10b981; font-weight: bold; }
+        .tab-inactive { border-bottom: 3px solid transparent; color: #64748b; }
+        .tab-inactive:hover { color: #334155; border-bottom: 3px solid #cbd5e1; }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .no-print { display: block; }
+        .alert-card { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border-left: 4px solid #f43f5e; }
+        .persona-card { background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%); }
+        .pro-con-card { background: linear-gradient(to bottom right, #ffffff, #f8fafc); }
+        .pdf-page-break-avoid { page-break-inside: avoid; break-inside: avoid; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white shadow-xl border-b-4 border-emerald-500 no-print sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+            <div class="flex items-center space-x-3 w-full md:w-auto justify-center md:justify-start">
+                <i class="fas fa-chart-line text-2xl text-emerald-400"></i>
+                <h1 class="text-lg md:text-xl font-bold tracking-wide">BWP + GD HCM HR DASHBOARD</h1>
+            </div>
+            <div class="text-xs md:text-sm bg-slate-800 px-4 py-1.5 rounded-full border border-slate-700 flex items-center">
+                <i class="fas fa-sync-alt text-emerald-400 mr-2"></i>
+                Cập nhật mới nhất: <strong class="ml-1 text-emerald-300">Danh sách hiện tại (18/05/2026) (84 NV)</strong>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        
+        <!-- Navigation Tabs (Mobile Optimized) -->
+        <div class="flex overflow-x-auto scrollbar-hide space-x-6 border-b border-slate-300 mb-6 no-print w-full">
+            <button onclick="switchTab('overview-tab')" id="btn-tab-overview" class="pb-3 text-sm md:text-base transition-all tab-active focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center">
+                <i class="fas fa-globe mr-2"></i>0. Tổng quan (Mới nhất)
+            </button>
+            <button onclick="switchTab('demo-tab')" id="btn-tab-demo" class="pb-3 text-sm md:text-base transition-all tab-inactive focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center">
+                <i class="fas fa-id-card mr-2"></i>1. Nhân khẩu học (theo dữ liệu cũ)
+            </button>
+            <button onclick="switchTab('tna-tab')" id="btn-tab-tna" class="pb-3 text-sm md:text-base transition-all tab-inactive focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center">
+                <i class="fas fa-chalkboard-teacher mr-2"></i>2. TNA & Giải pháp L&D (theo dữ liệu cũ)
+            </button>
+            <button onclick="switchTab('turnover-tab')" id="btn-tab-turnover" class="pb-3 text-sm md:text-base transition-all tab-inactive focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center">
+                <i class="fas fa-user-minus mr-2"></i>3. Phân tích Thôi việc (theo dữ liệu cũ)
+            </button>
+        </div>
+
+        <!-- Global Export Controls -->
+        <div class="flex flex-wrap justify-center md:justify-end gap-2 md:gap-3 mb-6 no-print">
+            <button onclick="exportExcel()" class="flex-1 md:flex-none px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg transition border border-emerald-200 font-medium text-sm flex items-center justify-center shadow-sm">
+                <i class="fas fa-file-excel mr-2"></i>Xuất Excel
+            </button>
+            <button onclick="exportWord()" class="flex-1 md:flex-none px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white rounded-lg transition border border-blue-200 font-medium text-sm flex items-center justify-center shadow-sm">
+                <i class="fas fa-file-word mr-2"></i>Xuất Word
+            </button>
+            <button onclick="exportPDF()" class="w-full md:w-auto px-4 py-2.5 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-lg transition border border-red-200 font-medium text-sm flex items-center justify-center shadow-sm">
+                <i class="fas fa-file-pdf mr-2"></i>Xuất PDF
+            </button>
+        </div>
+
+        <!-- MAIN EXPORT CONTAINER -->
+        <div id="export-container" class="bg-transparent md:bg-white md:p-2 md:rounded-xl">
+            
+            <!-- PDF Header -->
+            <div class="hidden" id="pdf-header">
+                <div class="text-center mb-6">
+                    <h1 class="text-3xl font-bold text-slate-800 mb-2 uppercase tracking-wide">BÁO CÁO NHÂN SỰ TỔNG HỢP</h1>
+                    <p class="text-slate-600 text-lg" id="pdf-subtitle">Công ty TNHH Bitexco WorkPlace & GD HCM</p>
+                </div>
+                <hr class="mb-6 border-slate-300">
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 0: OVERVIEW (LATEST DATA 40+44)        -->
+            <!-- ========================================== -->
+            <div id="overview-tab" class="block">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6 pdf-page-break-avoid">
+                    <h2 class="text-lg md:text-xl font-bold text-slate-800">Tổng quan Danh sách Nhân sự Hiện tại (Dữ liệu Cập nhật nhất)</h2>
+                    <p class="text-slate-500 text-xs md:text-sm mt-1">Đồng bộ từ "Danh sach GD HCM & BWP moi nhat.csv". Tổng nhân sự ghi nhận: 84 người.</p>
+                </div>
+
+                <!-- Top KPIs -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-indigo-500 card-hover pdf-page-break-avoid flex flex-col justify-between">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1"><i class="fas fa-users mr-1.5 md:mr-2 text-indigo-400"></i>Tổng Quy mô (Headcount)</p>
+                        <h3 class="text-3xl md:text-4xl font-bold text-indigo-700 mt-1 md:mt-2">84</h3>
+                        <p class="text-[10px] md:text-xs text-rose-600 mt-2 font-medium"><i class="fas fa-arrow-down mr-1"></i>Giảm 12 người so với kỳ trước</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-pink-500 card-hover pdf-page-break-avoid flex flex-col justify-between">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1"><i class="fas fa-headset mr-1.5 md:mr-2 text-pink-400"></i>Khối GD HCM</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">44 <span class="text-sm font-normal text-slate-500">người</span></h3>
+                        <p class="text-[10px] md:text-xs text-slate-600 mt-2 font-medium">Chiếm 52.4% lực lượng</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-blue-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1"><i class="fas fa-building mr-1.5 md:mr-2 text-blue-400"></i>Khối WorkPlace (BWP)</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">40 <span class="text-sm font-normal text-slate-500">người</span></h3>
+                        <p class="text-[10px] md:text-xs text-slate-600 mt-2 font-medium">Chiếm 47.6% lực lượng</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-emerald-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1"><i class="fas fa-chart-pie mr-1.5 md:mr-2 text-emerald-400"></i>Tỷ lệ biến động cấu trúc</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">Shift</h3>
+                        <p class="text-[10px] md:text-xs text-emerald-600 mt-2 font-medium">Tỷ trọng BWP tăng nhẹ so với HCM</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm md:text-base font-bold text-slate-800 mb-1">Cơ cấu Nhân sự theo Công ty</h4>
+                        <p class="text-[10px] md:text-xs text-slate-500 mb-4">Tỷ trọng giữa GD HCM và BWP</p>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="overviewDivisionChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm md:text-base font-bold text-slate-800 mb-1">Phân bổ chi tiết theo Bộ phận/Phòng ban</h4>
+                        <p class="text-[10px] md:text-xs text-slate-500 mb-4">Dựa trên file danh sách mới nhất (Tổng 84)</p>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="overviewDeptChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Analysis Text -->
+                <div class="bg-indigo-50 p-5 md:p-6 rounded-2xl shadow-sm border border-indigo-100 mb-6 extract-text-overview pdf-page-break-avoid">
+                    <h3 class="text-base md:text-lg font-bold text-indigo-900 mb-4 flex items-center">
+                        <i class="fas fa-search-chart mr-2"></i>Nhận định từ Dữ liệu Hiện tại (Current State Insights)
+                    </h3>
+                    <ul class="space-y-3 md:space-y-4 text-slate-700 text-justify text-xs md:text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-indigo-500 mt-1 mr-3 text-base"></i> 
+                            <div><strong>Sự sụt giảm quân số (Headcount Contraction):</strong> So với mốc Master List cũ (96 người), danh sách hiện tại ghi nhận 84 nhân sự. Sự sụt giảm 12 nhân sự này tập trung chủ yếu ở khối GD HCM (Từ 62 xuống còn 44). Điều này hoàn toàn khớp với phân tích ở <i>Tab 3: Phân tích Thôi việc</i> về "Hội chứng rụng nhân sự sau thử việc".</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-indigo-500 mt-1 mr-3 text-base"></i> 
+                            <div><strong>Cân bằng cơ cấu (Structural Rebalancing):</strong> Lực lượng lao động hiện tại cân bằng hơn giữa Tiền phương (GD HCM: 44 người) và Hậu phương (BWP: 40 người). Khối BWP ghi nhận sự gia tăng về tỷ trọng, đòi hỏi ngân sách phúc lợi và đào tạo (TNA) cần được san sẻ công bằng hơn cho các nhóm Kỹ thuật/Vận hành thay vì chỉ dồn cho Kinh doanh.</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Detailed Table -->
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 pdf-page-break-avoid">
+                    <h3 class="text-base md:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3 flex items-center">
+                        <i class="fas fa-table text-emerald-600 mr-2"></i>Chi tiết Cơ cấu Nhân sự theo Đơn vị hiện hành
+                    </h3>
+                    <div class="overflow-x-auto w-full">
+                        <table class="min-w-full text-left text-xs md:text-sm whitespace-nowrap export-table-overview">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+                                <tr>
+                                    <th class="px-3 md:px-5 py-3 md:py-4 rounded-tl-lg">Khối / Công ty</th>
+                                    <th class="px-3 md:px-5 py-3 md:py-4">Phòng Ban / Bộ phận</th>
+                                    <th class="px-3 md:px-5 py-3 md:py-4 text-center">Số lượng (Hiện tại)</th>
+                                    <th class="px-3 md:px-5 py-3 md:py-4 text-center rounded-tr-lg">Tỷ trọng (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-pink-50 transition">
+                                    <td class="px-3 md:px-5 py-3 md:py-4 font-bold text-pink-700">GD HCM</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-slate-700">Phòng Kinh doanh (Sales)</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center font-bold text-slate-800">28</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-slate-600">33.3%</td>
+                                </tr>
+                                <tr class="hover:bg-pink-50 transition">
+                                    <td class="px-3 md:px-5 py-3 md:py-4 font-bold text-pink-700">GD HCM</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-slate-700">Phòng Chăm sóc Khách hàng</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center font-bold text-slate-800">16</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-slate-600">19.0%</td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition">
+                                    <td class="px-3 md:px-5 py-3 md:py-4 font-bold text-blue-700">BWP</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-slate-700">Ban Quản lý Tòa nhà (Vận hành)</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center font-bold text-slate-800">18</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-slate-600">21.4%</td>
+                                </tr>
+                                <tr class="hover:bg-blue-50 transition">
+                                    <td class="px-3 md:px-5 py-3 md:py-4 font-bold text-blue-700">BWP</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-slate-700">Phòng Kỹ thuật & Bảo trì</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center font-bold text-slate-800">22</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-slate-600">26.2%</td>
+                                </tr>
+                                <tr class="bg-slate-100 font-bold">
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-right" colspan="2">TỔNG NHÂN SỰ TOÀN HỆ THỐNG</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-indigo-700 text-lg">84</td>
+                                    <td class="px-3 md:px-5 py-3 md:py-4 text-center text-slate-800">100%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 1: DEMOGRAPHICS (96 NV)                -->
+            <!-- ========================================== -->
+            <div id="demo-tab" class="hidden">
+                <!-- Data Banner -->
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 pdf-page-break-avoid flex items-start">
+                    <i class="fas fa-exclamation-triangle text-amber-500 mt-1 mr-3 text-lg"></i>
+                    <div class="text-sm text-slate-700">
+                        <strong>Lưu ý Dữ liệu:</strong> Báo cáo Nhân khẩu học này được tính toán dựa trên file <i>Master List cũ (96 nhân sự Active)</i> để đảm bảo tính nguyên bản của yêu cầu trước đó.
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6 pdf-page-break-avoid">
+                    <h2 class="text-lg md:text-xl font-bold text-slate-800">Phân khúc Thị trường Nội bộ (Internal Market Segmentation)</h2>
+                </div>
+                
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-indigo-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1">Quy mô (Company)</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">96</h3>
+                        <p class="text-[10px] md:text-xs text-slate-600 mt-2">HCM: <b>62</b> | BWP: <b>34</b></p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-pink-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1">Giới tính (Nam/Nữ)</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">45/51</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-amber-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1">Đang độc thân</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">60%</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-t-4 border-emerald-500 card-hover pdf-page-break-avoid">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium mb-1">Bằng Cử nhân+</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mt-1 md:mt-2">82%</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm font-bold text-slate-700 mb-4 text-center">Phân bổ Độ tuổi</h4>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="ageDistributionChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm font-bold text-slate-700 mb-4 text-center">Kỹ năng & Chứng chỉ</h4>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="skillsInventoryChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 extract-text-demo pdf-page-break-avoid">
+                    <h3 class="text-base md:text-lg font-bold text-slate-800 mb-4">Thuyết minh Nhân khẩu học</h3>
+                    <ul class="space-y-2 text-slate-700 text-xs md:text-sm list-disc pl-5">
+                        <li><strong>Phân cực sâu sắc:</strong> HCM trẻ trung, độc thân. BWP lớn tuổi, có gia đình. Cần chính sách đãi ngộ riêng biệt.</li>
+                        <li><strong>Khoảng trống Kỹ năng:</strong> Tỷ lệ chứng chỉ Ngoại ngữ/Tin học còn thấp (dù bằng cấp cao).</li>
+                    </ul>
+                </div>
+                <table class="hidden export-table-demo"><tbody><tr><td>Quy mô NV</td><td>96</td></tr></tbody></table>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 2: TNA ANALYSIS                        -->
+            <!-- ========================================== -->
+            <div id="tna-tab" class="hidden">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6 pdf-page-break-avoid">
+                    <h2 class="text-lg md:text-xl font-bold text-slate-800">Chẩn đoán Nhu cầu Đào tạo (TNA)</h2>
+                    <p class="text-slate-500 text-xs md:text-sm mt-1">Sử dụng tham chiếu SHRM Metrics (Dữ liệu 96 NV).</p>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-l-4 border-amber-500 card-hover">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium">Time to Proficiency</p><h3 class="text-2xl md:text-3xl font-bold">45%</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-l-4 border-indigo-500 card-hover">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium">Reskilling Need</p><h3 class="text-2xl md:text-3xl font-bold">BWP</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-l-4 border-purple-500 card-hover">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium">Span of Control</p><h3 class="text-2xl md:text-3xl font-bold">1:12</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 md:p-5 shadow-sm border-l-4 border-emerald-500 card-hover">
+                        <p class="text-[10px] md:text-sm text-slate-500 font-medium">Retention Target</p><h3 class="text-2xl md:text-3xl font-bold">>80%</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 pdf-page-break-avoid">
+                    <h3 class="text-base md:text-lg font-bold text-slate-800 mb-4 border-b pb-3">Đề án L&D Trước mắt (Kế hoạch 3-6 tháng)</h3>
+                    <div class="overflow-x-auto w-full">
+                        <table class="min-w-full text-left text-xs md:text-sm whitespace-nowrap export-table-tna">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+                                <tr><th>Đối tượng</th><th>Vấn đề</th><th>Chương trình L&D</th><th>Mục tiêu</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr><td class="py-3 font-bold text-pink-700">GD HCM (Sales)</td><td>Sốc KPI</td><td class="font-bold">Post-Probation Kit</td><td>Giảm Turnover</td></tr>
+                                <tr><td class="py-3 font-bold text-pink-700">GD HCM (Trưởng ca)</td><td>Thiếu kỹ năng kèm</td><td class="font-bold">OJT Coaching</td><td>Tăng Năng lực LĐ</td></tr>
+                                <tr><td class="py-3 font-bold text-blue-700">BWP (Kỹ thuật)</td><td>Tụt hậu quy trình</td><td class="font-bold">Digital Literacy</td><td>100% Phủ đào tạo</td></tr>
+                                <tr><td class="py-3 font-bold text-blue-700">BWP (Senior)</td><td>Thiếu Kế thừa</td><td class="font-bold">Mentorship (TTT)</td><td>Truyền nghề</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-5 rounded-2xl border mb-6 extract-text-tna"><h3 class="font-bold mb-2">Thuyết minh TNA:</h3><p class="text-sm text-slate-700">Turnover cao ở HCM do thiếu kỹ năng sinh tồn. Cần đào tạo OJT Coaching cho Quản lý.</p></div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 3: OFFBOARDING & TURNOVER ANALYSIS     -->
+            <!-- ========================================== -->
+            <div id="turnover-tab" class="hidden">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6 flex justify-between items-center pdf-page-break-avoid">
+                    <div>
+                        <h2 class="text-lg md:text-xl font-bold text-slate-800">Chẩn đoán Rủi ro qua Hồ sơ Nghỉ việc</h2>
+                        <p class="text-slate-500 text-xs md:text-sm mt-1">Dữ liệu 42 hồ sơ nghỉ việc (2022-2026).</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-rose-500"><p class="text-xs text-slate-500">Thôi việc (22-26)</p><h3 class="text-2xl font-bold">42</h3></div>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-orange-500"><p class="text-xs text-slate-500">First-Year Turnover</p><h3 class="text-2xl font-bold">71%</h3></div>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-indigo-500"><p class="text-xs text-slate-500">Tuổi TB lúc nghỉ</p><h3 class="text-2xl font-bold">24.5</h3></div>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-emerald-500"><p class="text-xs text-slate-500">Thiệt hại Năng suất</p><h3 class="text-lg font-bold">Trầm trọng</h3></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm font-bold text-center mb-2">Thâm niên lúc Thôi việc</h4>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="exitTenureChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 pdf-page-break-avoid">
+                        <h4 class="text-sm font-bold text-center mb-2">Thôi việc theo Bộ phận</h4>
+                        <div class="relative h-56 md:h-72 w-full"><canvas id="deptExitChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="alert-card p-5 rounded-2xl mb-6 extract-text-turnover">
+                    <h3 class="font-bold text-rose-800 mb-2">Bắt bệnh từ Data Thôi việc</h3>
+                    <ul class="text-sm text-slate-700 list-disc pl-5">
+                        <li><strong>Hội chứng Tháng thứ 4:</strong> 52% rụng ở mốc 2 tháng - 1 năm. Khâu Hội nhập (Onboarding) đang quá ngắn, thiếu kèm cặp.</li>
+                        <li><strong>Rò rỉ Chất xám BWP:</strong> Nhân sự giỏi nghỉ do thiếu lộ trình đào tạo PropTech.</li>
+                    </ul>
+                </div>
+                <table class="hidden export-table-turnover"><tbody><tr><td>Data Thôi việc</td><td>42 records</td></tr></tbody></table>
+            </div>
+
+        </div> 
+    </div>
+
+    <script>
+        let currentTabId = 'overview-tab';
+
+        function switchTab(tabId) {
+            const tabs = ['overview-tab', 'demo-tab', 'tna-tab', 'turnover-tab'];
+            const btns = ['btn-tab-overview', 'btn-tab-demo', 'btn-tab-tna', 'btn-tab-turnover'];
+            
+            tabs.forEach(t => document.getElementById(t).style.display = 'none');
+            btns.forEach(b => document.getElementById(b).className = "pb-3 text-sm md:text-base transition-all tab-inactive focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center");
+            
+            document.getElementById(tabId).style.display = 'block';
+            let activeBtnId = 'btn-tab-' + tabId.split('-')[0];
+            document.getElementById(activeBtnId).className = "pb-3 text-sm md:text-base transition-all tab-active focus:outline-none whitespace-nowrap flex-shrink-0 flex items-center";
+            
+            currentTabId = tabId;
+            
+            const pdfSubtitle = document.getElementById('pdf-subtitle');
+            if (tabId === 'overview-tab') pdfSubtitle.innerText = "Tổng quan Nhân sự (Dữ liệu mới nhất 84 NV)";
+            else if (tabId === 'demo-tab') pdfSubtitle.innerText = "Nghiên cứu Thị trường Nội bộ (Mốc cũ 96 NV)";
+            else if (tabId === 'tna-tab') pdfSubtitle.innerText = "Phân tích Nhu cầu Đào tạo (TNA)";
+            else pdfSubtitle.innerText = "Phân tích Thôi việc & Giải pháp L&D";
+        }
+
+        Chart.defaults.font.family = "'Segoe UI', sans-serif";
+        Chart.defaults.maintainAspectRatio = false;
+        Chart.defaults.responsive = true;
+
+        function initCharts() {
+            // OVERVIEW TAB CHARTS (New 40 + 44)
+            if(document.getElementById('overviewDivisionChart')) {
+                new Chart(document.getElementById('overviewDivisionChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['GD HCM (44 NV)', 'Khối BWP (40 NV)'],
+                        datasets: [{
+                            data: [44, 40],
+                            backgroundColor: ['#ec4899', '#3b82f6'],
+                            borderWidth: 2, borderColor: '#fff'
+                        }]
+                    },
+                    options: { cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            if(document.getElementById('overviewDeptChart')) {
+                new Chart(document.getElementById('overviewDeptChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Sales (HCM)', 'Kỹ thuật (BWP)', 'Vận hành (BWP)', 'CSKH (HCM)'],
+                        datasets: [{
+                            label: 'Số lượng nhân sự',
+                            data: [28, 22, 18, 16],
+                            backgroundColor: ['#f43f5e', '#2563eb', '#0ea5e9', '#fb7185'],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+
+            // DEMO TAB CHARTS
+            if(document.getElementById('ageDistributionChart')) {
+                new Chart(document.getElementById('ageDistributionChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Gen Z', 'Gen Y', 'Gen X'],
+                        datasets: [
+                            { label: 'GD HCM', data: [42, 15, 5], backgroundColor: '#ec4899' },
+                            { label: 'BWP', data: [3, 16, 15], backgroundColor: '#3b82f6' }
+                        ]
+                    },
+                    options: { scales: { x: { stacked: true }, y: { stacked: true } } }
+                });
+            }
+            if(document.getElementById('skillsInventoryChart')) {
+                new Chart(document.getElementById('skillsInventoryChart').getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['Ngoại ngữ', 'Tin học', 'Nghiệp vụ', 'Kỹ thuật', 'HSE'],
+                        datasets: [
+                            { label: 'HCM', data: [70, 60, 95, 5, 10], borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.2)' },
+                            { label: 'BWP', data: [30, 45, 15, 90, 85], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.2)' }
+                        ]
+                    }
+                });
+            }
+
+            // TURNOVER TAB CHARTS
+            if(document.getElementById('exitTenureChart')) {
+                new Chart(document.getElementById('exitTenureChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['< 2 tháng', '2th-1 năm', '1-3 năm', '> 3 năm'],
+                        datasets: [{ data: [8, 22, 9, 3], backgroundColor: '#f43f5e', borderRadius: 4 }]
+                    },
+                    options: { plugins: { legend: { display: false } } }
+                });
+            }
+            if(document.getElementById('deptExitChart')) {
+                new Chart(document.getElementById('deptExitChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sales HCM', 'CSKH HCM', 'Kỹ thuật BWP', 'Vận hành BWP'],
+                        datasets: [{ data: [22, 10, 5, 5], backgroundColor: ['#e11d48', '#fb7185', '#3b82f6', '#7dd3fc'] }]
+                    }
+                });
+            }
+        }
+
+        function exportExcel() {
+            let tableClass = `.export-table-${currentTabId.split('-')[0]}`;
+            const tableEl = document.querySelector(`#${currentTabId} ${tableClass}`);
+            if(!tableEl) return;
+            var wb = XLSX.utils.book_new(), ws = XLSX.utils.table_to_sheet(tableEl);
+            XLSX.utils.book_append_sheet(wb, ws, "Data");
+            XLSX.writeFile(wb, `HR_Data_${currentTabId}.xlsx`);
+        }
+
+        function exportWord() {
+            let textClass = `.extract-text-${currentTabId.split('-')[0]}`;
+            const textContainer = document.querySelector(`#${currentTabId} ${textClass}`);
+            if(!textContainer) return;
+            let insightsHtml = `<h1>BÁO CÁO NHÂN SỰ CHI TIẾT</h1><ul>`;
+            textContainer.querySelectorAll('li').forEach(li => { insightsHtml += `<li>${li.innerText}</li>`; });
+            insightsHtml += "</ul>";
+            const blob = new Blob(['\ufeff', `<html><body>${insightsHtml}</body></html>`], { type: 'application/msword' });
+            const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `HR_Insights.doc`;
+            link.click();
+        }
+
+        function exportPDF() {
+            const pdfHeader = document.getElementById('pdf-header');
+            const btnControls = document.querySelector('.no-print.flex.justify-end'); 
+            pdfHeader.classList.remove('hidden');
+            if(btnControls) btnControls.style.display = 'none';
+
+            const opt = { 
+                margin: [10, 10, 10, 10], filename: `HR_Report_16x9.pdf`, 
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1366 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+            };
+            html2pdf().set(opt).from(document.getElementById('export-container')).save().then(() => {
+                pdfHeader.classList.add('hidden');
+                if(btnControls) btnControls.style.display = 'flex';
+            });
+        }
+
+        window.addEventListener('load', function() { setTimeout(initCharts, 100); });
+    </script>
+</body>
+</html>
